@@ -1,8 +1,6 @@
 import sys
 import os
-
-sys.stderr.write('this is the beginning' + os.linesep)
-
+import random
 from Bio import SeqIO,motifs
 from Bio.Alphabet import IUPAC
 #only needed for timing

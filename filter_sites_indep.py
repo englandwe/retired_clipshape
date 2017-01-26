@@ -1,15 +1,15 @@
+##Usage: filter_sites_indep.py clipmap_output rpkm_file newsites_file outfile samp_count
 import sys
 import os
-
-sys.stderr.write('this is the beginning' + os.linesep)
-
+import random
 from Bio import SeqIO,motifs
 from Bio.Alphabet import IUPAC
 #only needed for timing
 from datetime import datetime
-import random
 
-def addDataFast(newsites,clipmap_outputs):
+#########Functions###########
+
+def addDataFast(newsites,clipmap_outputs,sampling_depth):
     #ALTERNATIVE IDEA: randomly subsample X newsites, find their central clippiness, if it's 0, keep it.  if not, toss.
     #continue sampling until you have enough true-zero newsites
     #in this test case, there were 141, so let's try for that
@@ -30,7 +30,7 @@ def addDataFast(newsites,clipmap_outputs):
             if float(central_clippiness) == 0:
                 clipcombo=[central_clippiness,clipshape]
                 biglist.append(clipcombo)
-        if len(biglist) >= 141:
+        if len(biglist) >= sampling_depth:
             break
     #now sort, rank and label
     #this is a bit silly with all zeroes, but i'll keep it in case we ever want higher vals in future
@@ -38,7 +38,7 @@ def addDataFast(newsites,clipmap_outputs):
     ranked_biglist=sorted(biglist, key=lambda x: int(x[0]),reverse=True)
     for i in range(0,len(ranked_biglist)):
         for entry in ranked_biglist[i][1]:
-            newentry=[[entry[0]] + [str(i) + '_' + entry[1]] + [i] + entry[1:]]
+            newentry=[entry[0]] + [str(i) + '_' + entry[1]] + [i] + entry[1:]
             outlist.append(newentry)
 #            sys.stdout.write(newentry + os.linesep)
     return outlist
@@ -51,49 +51,42 @@ def flattenList(listin):
     final='\n'.join(list2)
     return final
 
-def flattenListTriple(listin):
-    list2=[]
-    list3=[]
-    for item in listin:
-        list2.append('\t'.join([str(x) for x in item]))
-    for item in list2:
-        list3.append('\t'.join([str(x) for x in item])
-    final='\n'.join(list3)
-    return final
-
 #################################3
+sys.stderr.write('starting the action: ' + str(datetime.now()) + os.linesep)
 
 #and import the clipmap output
 clipmap_positions=[]
-with open('testclip2.out') as inclip:
+#with open('testclip2.out') as inclip:
+with open(sys.argv[1]) as inclip:
     for line in inclip:
         clipmap_positions.append(line.strip().split('\t'))
 
 sys.stderr.write('clipmap imported: ' + str(datetime.now()) + os.linesep)
 
 ###########################
-motif_len=int(sys.argv[1])
-
-sys.stderr.write('starting the action: ' + str(datetime.now()) + os.linesep)
-
+#motif_len=int(sys.argv[1])
 
 #####################################
 #Because picking out the data takes forever, filter by rpkm before adding data
 #eventually do this even earlier to speed the process up
 
 rpkmdict={}
-with open('SRR1534954.rpkm') as infile:
+#with open('SRR1534954.rpkm') as infile:
+with open(sys.argv[2]) as infile:
     for line in infile:
         inline=line.strip().split('\t')
         if '#' not in inline[0]:
             rpkmdict[inline[0]] = float(inline[4])
 #read in new sites
 newlist=[]
-with open('intermed_newsites') as infile:
+#with open('intermed_newsites') as infile:
+with open(sys.argv[3]) as infile:
     for line in infile:
         newlist.append(line.strip().split('\t'))
 
 sys.stderr.write('rpkm and newsites read: ' + str(datetime.now()) + os.linesep)
+
+samp_count=int(sys.argv[5])
 
 #filter for RPKM >10, and output the list
 filt_newsites=[newsite for newsite in newlist if rpkmdict[newsite[0]] > 10]
@@ -106,13 +99,13 @@ sys.stderr.write('newsites filtered: ' + str(datetime.now()) + os.linesep)
 #newout.close()
 
 #add the data
-sites_with_data=addDataFast(filt_newsites,clipmap_positions)
+sites_with_data=addDataFast(filt_newsites,clipmap_positions,samp_count)
 sys.stderr.write('metadata added: ' + str(datetime.now()) + os.linesep)
 
 outlist=flattenList(sites_with_data)
 sys.stderr.write('done! writing final output: ' + str(datetime.now()) + os.linesep)
 
-f=open('test_motif_filt_fast_nonull.out','w')
+f=open(sys.argv[4],'w')
 f.write('LocalPos\tLabel\tRank\tTranscript\tChr\tOrigPos\tShape\tClip\n')
 f.write(outlist)
 f.close()
