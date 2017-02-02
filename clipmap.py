@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+#USAGE: shapedata clipdata gtf
+
 #for transcript in shape_output
 #find all its exons in gft file, grab their chr and positions (and order)
 #retrieve the iCLIP data for each position
