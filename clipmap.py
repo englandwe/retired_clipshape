@@ -34,12 +34,19 @@ class GtfRec(object):
 def stitchTrans(ensembl_id,gtf_list):
     pos_list=[]
     chrid=''
+    tmplist=[]
     for gtf_rec in gtf_list:
+        #grab each exon's start & stop, plus exon number so they can be put in order
         if gtf_rec.feature == 'exon' and gtf_rec.attdict['transcript_id'] == ensembl_id:
-            pos_list+=range(gtf_rec.start,gtf_rec.end+1)
+            tmplist.append([gtf_rec.attdict['exon_number'],gtf_rec.start,gtf_rec.end+1])
             if len(chrid) == 0:
                 chrid=gtf_rec.seqname
-    return [ensembl_id,chrid,pos_list]
+                strand=gtf_rec.strand
+    #sort the list by exon number
+    sorted_tmplist=sorted(tmplist, key=lambda x: int(x[0]))
+    for item in sorted_tmplist:
+        pos_list+=range(item[1],item[2])
+    return [ensembl_id,chrid,pos_list,strand]
 
 
 #takes the stitched transcript and fetches iclip data.  returns input with clip data appended.
@@ -56,12 +63,12 @@ def clipMap(stitched_trans,clip_list):
             pos_key=clipchr+'_'+str(pos)
             if pos_key in clip_list:
                     clipped_list[pos]=clip_list[pos_key]
-        if len(clipped_list) > 0:
-            return stitched_trans + [clipped_list]
-        else:
-            sys.stderr.write('INFO: %s is mapped to a region (%s,%s-%s) which contains no CLIP sites. Skipping...' % \
-(stitched_trans[0],stitched_trans[1],stitched_trans[2][0],stitched_trans[2][-1]) + os.linesep)
-            return 'FAIL'
+        return stitched_trans + [clipped_list]
+        #if len(clipped_list) > 0:
+        #    return stitched_trans + [clipped_list]
+        #else:
+            #sys.stderr.write('INFO: %s is mapped to a region (%s,%s-%s) which contains no CLIP sites. Skipping...' % (stitched_trans[0],stitched_trans[1],stitched_trans[2][0],stitched_trans[2][-1]) + os.linesep)
+            #return 'FAIL'
 
 #grabs shape data for a stitched transcript.  takes output of clipMap
 def clipMerge(clipped_trans,shape_list):
@@ -78,9 +85,9 @@ def clipMerge(clipped_trans,shape_list):
 #final merge
 def mergeAll(shaped_trans):
     finallist=[]
-    clipped_pos=shaped_trans[3].keys()
+    clipped_pos=shaped_trans[4].keys()
     for i in range(len(shaped_trans[2])):
-        tmplist=[shaped_trans[0], shaped_trans[1], shaped_trans[2][i], shaped_trans[4][i]]
+        tmplist=[shaped_trans[0], shaped_trans[1], shaped_trans[3], shaped_trans[2][i], shaped_trans[5][i]]
         if tmplist[2] in clipped_pos:
             tmplist.append(shaped_trans[3][tmplist[2]])
         else:
@@ -150,6 +157,8 @@ with open(sys.argv[1]) as infile:
 
 ############################################
 
+
+#ENSMUST00000002289
 id_list=[x[0] for x in shape_data]
 for id in id_list:
     trans_stitched=stitchTrans(id,gtf_rec_list)
