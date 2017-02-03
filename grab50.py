@@ -10,22 +10,22 @@ def getSites(cliplist,min_stops,range_len):
     blacklist=[]
     idx=1
     #grab every position with sufficient stops, sort by stops with the largest # first
-    better_cliplist=[[x[0],x[1],int(x[2]),x[3],int(x[4])] for x in cliplist]
-    enough_stops=sorted([x for x in better_cliplist if int(x[4]) >= min_stops],key=itemgetter(4),reverse=True)
+    better_cliplist=[[x[0],x[1],x[2],int(x[3]),x[4],int(x[5])] for x in cliplist]
+    enough_stops=sorted([x for x in better_cliplist if x[5] >= min_stops],key=itemgetter(5),reverse=True)
     print "stopcheck complete: %s sites found" % (len(enough_stops))
     for entry in enough_stops:
        #check that we didn't grab it already
-       ismatched=len([x for x in blacklist if x[0:2] == entry[0:2] and int(entry[2]) in range(x[2],x[3]+1)])
+       ismatched=len([x for x in blacklist if x[0:2] == entry[0:2] and entry[3] in range(x[2],x[3]+1)])
        print entry
        print ismatched
        if ismatched == 0:
            #grab the entry and +/- 50bp
-           start = int(entry[2]) - range_len
-           stop = int(entry[2]) + range_len
+           start = int(entry[3]) - range_len
+           stop = int(entry[3]) + range_len
            #add all those positions to the main list,with a ranked index and a local position
-           tmpsites=[[idx]+x for x in better_cliplist if x[0:2] == entry[0:2] and int(x[2]) in range(start,stop+1)]
+           tmpsites=[[idx]+x for x in better_cliplist if x[0:2] == entry[0:2] and x[3] in range(start,stop+1)]
            for item in tmpsites:
-               posidx=int(item[3])-int(entry[2])
+               posidx=int(item[4])-entry[3]
                site_list.append([posidx]+[str(item[0])+'_'+item[1]]+item)
            #add the region to a blacklist so it doesn't get grabbed again
            blacklist.append([entry[0],entry[1],start,stop])
@@ -56,6 +56,6 @@ clipout=getSites(clip_data,min_stops,range_len)
 outlist=flattenList(clipout)
 #print outlist
 f=open(sys.argv[4],'w')
-f.write('LocalPos\tLabel\tRank\tTranscript\tChr\tOrigPos\tShape\tClip\n')
+f.write('LocalPos\tLabel\tRank\tTranscript\tChr\tStrand\tOrigPos\tShape\tClip\n')
 f.write(outlist)
 f.close()
