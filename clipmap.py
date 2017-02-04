@@ -88,8 +88,8 @@ def mergeAll(shaped_trans):
     clipped_pos=shaped_trans[4].keys()
     for i in range(len(shaped_trans[2])):
         tmplist=[shaped_trans[0], shaped_trans[1], shaped_trans[3], shaped_trans[2][i], shaped_trans[5][i]]
-        if tmplist[2] in clipped_pos:
-            tmplist.append(shaped_trans[3][tmplist[2]])
+        if tmplist[3] in clipped_pos:
+            tmplist.append(shaped_trans[4][tmplist[3]])
         else:
             tmplist.append('0')
         finallist.append(tmplist)
