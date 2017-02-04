@@ -214,6 +214,8 @@ def addDataFast(newsites,clipmap_outputs,sampling_depth):
                         for item in positions_with_clipshape:
                             fmt_site=[local_start,str(mock_rank)+'_'+site[0],mock_rank,site[0],item[0],item[1],item[2],item[3]]
                             biglist.append(fmt_site)
+                            local_start+=1
+                            mock_rank+=1
         if len(biglist) >= sampling_depth:
             break
     return biglist
