@@ -182,8 +182,8 @@ with open(sys.argv[1]) as infile:
 ranges_outname = "%s.clipranges" % sys.argv[4]
 f1=open(ranges_outname,'w')
 
-clip_outname = "%s.clipmap" % sys.argv[4]
-f2=open(clip_outname,'w')
+#clip_outname = "%s.clipmap" % sys.argv[4]
+#f2=open(clip_outname,'w')
 
 
 #ENSMUST00000002289
@@ -191,17 +191,17 @@ id_list=[x[0] for x in shape_data]
 for id in id_list:
     trans_stitched=stitchTrans(id,gtf_rec_list)
     trans_ranges=outputRanges(trans_stitched)
-    trans_clipped=clipMap(trans_stitched,clip_data)
-    if trans_clipped != 'FAIL':
-        trans_shaped=clipMerge(trans_clipped,shape_data)
-        if trans_shaped != 'FAIL':
-            trans_merged=mergeAll(trans_shaped)
+#    trans_clipped=clipMap(trans_stitched,clip_data)
+#    if trans_clipped != 'FAIL':
+#        trans_shaped=clipMerge(trans_clipped,shape_data)
+#        if trans_shaped != 'FAIL':
+#            trans_merged=mergeAll(trans_shaped)
 
-            trans_out=flattenList(trans_ranges)
-            f1.write(trans_out+'\n')
+    trans_out=flattenList(trans_ranges)
+    f1.write(trans_out+'\n')
 
-            clip_out=flattenList(trans_merged)
-            f2.write(clip_out+'\n')
+#            clip_out=flattenList(trans_merged)
+#            f2.write(clip_out)
 
 f1.close()
-f2.close()
+#f2.close()

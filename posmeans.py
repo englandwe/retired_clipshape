@@ -9,12 +9,12 @@ with open(sys.argv[1]) as infile:
 #LocalPos	Label	Rank	Transcript	Chr	OrigPos	Shape	Clip
 #-50	1_ENSMUST00000172812	1	ENSMUST00000172812	19	5797379	0.000	0
 
-poslist=list(set([x[0] for x in biglist]))
+poslist=list(set([x[0] for x in biglist if x[0] != 'LocalPos']))
 
 outlist=[]
 for pos in poslist:
-    shapes=[float(x[6]) for x in biglist if x[0] == pos and x[6] not in ['NULL','Shape']]
-    clips=[int(x[7]) for x in biglist if x[0] == pos and x[7] != 'Clip']
+    shapes=[float(x[7]) for x in biglist if x[0] == pos and x[7] != 'NULL']
+    clips=[int(x[8]) for x in biglist if x[0] == pos]
     shapemean=numpy.mean(shapes)
     clipmean=numpy.mean(clips)
     outlist.append([pos,shapemean,'shape'])
