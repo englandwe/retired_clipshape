@@ -82,7 +82,7 @@ def clipMapRanges(clipmap_output):
     transcripts=list(set([x[0] for x in clipmap_output]))
     for trans in transcripts:
         #trans_chr=set([x[1] for x in clipmap_output if x[0] == trans])
-        #print trans_chr
+        print trans_chr
         trans_pos_wchr=[[x[1],x[2],int(x[3])] for x in clipmap_output if x[0] == trans]
         #now this is where we need to be careful of nonadjacent ranges
         subrange_list=[]
@@ -111,6 +111,7 @@ def findNewSitesFast(transcript,clip_motif,clip_pssm,fasta_data,clipmap_outputs,
     #we don't want none unless you got 10RPKM hon                          
     if rpkmdict[transcript[0]] > 10:
         #tx_seq=fasta_data[transcript[1]].seq[transcript[2]-1:transcript[3]]
+        print 'getting tx data'
         tx_seq=''
         for segment in transcript[1]:
             #is segment + or -?
@@ -124,12 +125,14 @@ def findNewSitesFast(transcript,clip_motif,clip_pssm,fasta_data,clipmap_outputs,
             #sequence will be concatentated range by range
             tx_seq=tx_seq + range_seq
         #see if there are any hits
+        print 'finding hits'
         tmpsites=[]
         for position,score in clip_pssm.search(tx_seq,threshold=3.0):
             tmpsites.append([position,score])
         #pointless to go further if there are no appropriate hits
         tmpsites_pos=[x for x in tmpsites if x[0] >= 1]
         if len(tmpsites_pos) > 0:
+            print 'got this many hits: %s' % (len(tmpsites_pos))
             #build a list (dict?) of seq positions to real positions:
             #if transcript is +, realpos is direct.  just take the base #s from start to end.
             #ex:  exon1 50-100 exon2 200-300 exon3 500-1000
@@ -141,6 +144,7 @@ def findNewSitesFast(transcript,clip_motif,clip_pssm,fasta_data,clipmap_outputs,
     
             #first, make the ranges.  this is the same regardless of strand 
             #(the first x positions are always from exon1, even if they're in reverse)
+            print 'getting txranges'
             startval=1
             tx_ranges=[]
             for idx,subset in enumerate(transcript[1]):
@@ -149,6 +153,7 @@ def findNewSitesFast(transcript,clip_motif,clip_pssm,fasta_data,clipmap_outputs,
                 startval=range_seq_stop+1
                 tx_ranges.append([idx,subset[0],subset[1],range_seq_start,range_seq_stop])           
             #ok, now we can look inside the appropriate
+            print 'making transcript pos dict'
             transcript_positions={}
             for i in range(1,len(tx_seq)+1):
                 #find the appropriate transcript range
@@ -169,6 +174,7 @@ def findNewSitesFast(transcript,clip_motif,clip_pssm,fasta_data,clipmap_outputs,
             #general useful note: regardless of direction, the motif will be found from pos:pos+len(motif).  also translate back to original positions 
             #we don't actually want matches on the other strand, because these are (presumably single-stranded) transcripts.
             #neg-strand transcripts have already been RC'd so they will be handled correctly
+            print 'cycling through potential sites'
             for site in tmpsites_pos:
                 #position in the seq object
                 subpos=[site[0],site[0]+len(clip_motif)]
@@ -184,38 +190,49 @@ def findNewSitesFast(transcript,clip_motif,clip_pssm,fasta_data,clipmap_outputs,
                 endpos_50=centerpos+50
                 #we want to make sure we're not too close to the end of the tx, so startpos <1 or endpos > the numer of positions are right out
                 if startpos_50 >= 1 and endpos_50 <=len(tx_seq):
+                    print 'ok, length check passed'
                     #loop from start to endpos, finding [trans,chr,realpos]
                     #strand is no longer important
                     posout=[transcript_positions[pos] for pos in range(startpos_50, endpos_50+1)]
                     real_centerpos=transcript_positions[centerpos]
                     potential_newsite=[transcript[0],posout,real_centerpos,score]
 ##################integrate add_data here
-                    positions_with_clipshape=[]
                     #let's check for a full length region (101bp in this case)
                     if len(potential_newsite[1]) == 101:
+                        print 'calculating central clippiness'
                     #before we even bother with a site, let's see if it has a central clippiness of zero
                         central_chrom,central_strand,central_position=potential_newsite[2]
                         #central_clippiness=[x[4] for x in clipmap_outputs if x[0] == potential_newsite[0] and x[1] == central_chrom and x[3] == central_position]
                         #with a generator
-                        clipgen=(x for x in clipmap_outputs if x[0] == potential_newsite[0] and x[1] == central_chrom and x[3] == central_position)
+                        clipgen=(x for x in clipmap_outputs if x[0] == potential_newsite[0] and x[1] == central_chrom and int(x[3]) == central_position)
                         clipgen_search=next(clipgen,None)
                         if clipgen_search is not None:
                             central_clippiness=int(clipgen_search[5])
                         else:
                            central_clippiness=None
+                        print central_clippiness
                         if central_clippiness == 0:
                             #grab clip/shape data for all positions in the site
-                            for chrom, position in potential_newsite[1]:
+                            #base_posgen=(x for x in clipmap_outputs if x[0] == potential_newsite[0])
+                            base_list=[x for x in clipmap_outputs if x[0] == potential_newsite[0]]
+                            positions_with_clipshape=[]
+                            for chrom, strand, position in potential_newsite[1]:
                                 #get the clip/shape data
                                 #generator here too
                                 #pos_clipshape = [[chrom,position,x[4],x[5]] for x in clipmap_outputs if x[0] == potential_newsite[0] and x[1] == chrom and x[3] == position]
-                                posgen=([chrom,position,x[4],x[5]] for x in clipmap_outputs if x[0] == potential_newsite[0] and x[1] == chrom and x[3] == position)
-                                posgen_search=next(posgen,None)
-                                if posgen_search is not None:
-                                    positions_with_clipshape.append(posgen_search)
+                                print 'getting clip/shape data'
+                                for entry in base_list:
+                                    if entry[1] == chrom and int(entry[3]) == position:
+                                        positions_with_clipshape.append([chrom,position,entry[4],entry[5]])
+                                #posgen=([chrom,position,x[4],x[5]] for x in clipmap_outputs if x[0] == potential_newsite[0] and x[1] == chrom and int(x[3]) == position)
+                                #posgen_search=next(posgen,None)
+                                #if posgen_search is not None:
+                                #    positions_with_clipshape.append(posgen_search)
                             #check for shape/clip data for all positions.  only continue if no empty clipshape, and no NULL in teh shape data
+                            print 'checking we have complete data'    
                             if len([x for x in positions_with_clipshape if len(x) == 0]) == 0 and len([x for x in positions_with_clipshape if 'NULL' in x]) == 0:
                                 #all basic checks passed.  add local position, 'rank', and label
+                                print 'indeed we do. adding to list' 
                                 local_start=int(-50)
                                 for item in positions_with_clipshape:
                                     fmt_site=[local_start,str(mock_rank)+'_'+potential_newsite[0],mock_rank,potential_newsite[0],item[0],central_strand,item[1],item[2],item[3]]
@@ -298,31 +315,37 @@ sys.stderr.write('motif computed: ' + str(datetime.now()) + os.linesep)
 clipmap_ranges=importClipRanges(clipranges_in)
 sys.stderr.write('clipmap ranges imported: ' + str(datetime.now()) + os.linesep)
 
-true_negatives=[]
+final_out = "%s.seqcomp_complete" % sys.argv[6]
+f=open(final_out,'w')
+f.write('LocalPos\tLabel\tRank\tTranscript\tChr\tStrand\tOrigPos\tShape\tClip\n')
+
+true_negatives=0
 mock_rank=1
 clip_pssm=clip_motif.pssm
 random.shuffle(clipmap_ranges)
 for potential in clipmap_ranges:
-    print "investigating potential sites in: %s" % (potential[0])
+    sys.stdout.write('investigating potential sites in: %s' % (potential[0])+os.linesep)
     site_with_data=findNewSitesFast(potential,clip_motif,clip_pssm,fasta_dict,clipmap_positions,rpkmdict,mock_rank)
     if type(site_with_data) is list:
-        print "got one! %s" % (potential[0])
-        true_negatives.append(site_with_data[0])
+        sys.stdout.write('got one! %s' % (potential[0])+os.linesep)
+        sys.stdout.write('%s' % (site_with_data)+os.linesep)
+        true_negatives+=1
+        outputlist=flattenList(site_with_data)
+        print outputlist
+        print 'we now have this many sites: %s' % (true_negatives)
+        f.write(outputlist+'\n')
         mock_rank+=1
     else:
-        print "no luck this time, because %s: %s" % (site_with_data,potential[0])
-    if len(true_negatives) >= samp_count:
+        sys.stdout.write('no luck this time, because %s: %s' % (site_with_data,potential[0])+os.linesep)
+    if true_negatives >= samp_count:
         break
 
 sys.stderr.write('sites found: ' + str(datetime.now()) + os.linesep)
 
-outlist=flattenList(true_negatives)
-sys.stderr.write('done! writing final output: ' + str(datetime.now()) + os.linesep)
+#outlist=flattenList(true_negatives)
+#sys.stderr.write('done! writing final output: ' + str(datetime.now()) + os.linesep)
 
-final_out = "%s.seqcomp_complete" % sys.argv[6]
-f=open(final_out,'w')
-f.write('LocalPos\tLabel\tRank\tTranscript\tChr\tStrand\tOrigPos\tShape\tClip\n')
-f.write(outlist)
+#f.write(outlist)
 f.close()
 
 sys.stderr.write('all\'s well that ends well: ' + str(datetime.now()) + os.linesep)
