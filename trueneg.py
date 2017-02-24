@@ -20,7 +20,7 @@ def getRange(list_of_positions):
     for entry in entry_list:
         #get list of positions w/ chromosome, centerpoint, left/right distances
         entry_sublist=[x for x in list_of_positions if x[1] == entry]
-	entry_pos_wchr=[[x[4],x[5],int(x[6])] for x in entry_sublist]
+	    entry_pos_wchr=[[x[4],x[5],int(x[6])] for x in entry_sublist]
         entry_centerpoint=[int(x[6]) for x in entry_sublist if int(x[0]) == 0][0]
         left_dist=min([int(x[0]) for x in entry_sublist])
         right_dist=max([int(x[0]) for x in entry_sublist])

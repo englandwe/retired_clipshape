@@ -1,0 +1,105 @@
+Code summary:
+
+clipmap.py
+
+Goal:  Map CLIP and SHAPE data onto transcripts
+Inputs:  SHAPE data by position, CLIP data by position, transcript GTF file, output file prefix
+Outputs: Table of CLIP + SHAPE data by position (<outprefix>.clipmap), list of contiguous ranges of positions which make up each transcript (<outprefix>.clipranges)
+
+How it works:
+
+Step 1: Gather exon info for transcripts
+1a. For each transcript present in SHAPE data, retrieve order, chromosome, genomic positions, and strand for all exons.
+1b. Output transcript, chromosome, strand, and positions to file (<outprefix>.clipranges).
+
+Step 2: Add CLIP data to corresponding positions in the transcript
+2a. Transcripts from chromosomes lacking CLIP data are skipped, with a warning to stderr.
+
+Step 3: Add SHAPE data to corresponding positions in transcripts.
+
+Step 4: Final formatting & output of CLIP/SHAPE data table
+4a. Any positions with SHAPE but not CLIP data are given a RT stop count of 0. (CLIP data is sparse)
+4b. Data table with CLIP & SHAPE data for each position in each transcript is written to <outprefix>.clipmap.
+
+grab50.py
+
+Goal: Retrieve CLIP and SHAPE data for a regions surrounding positions with a high number of RT stops.
+Inputs: Output of clipmap.py (<outprefix>.clipmap), RT stop min cutoff, desired range around position, output filename
+Outputs:  Table containing CLIP/SHAPE data for +/- <range> bases surrounding each position with sufficient RT stops (<outfile>)
+
+How it works:
+
+Step 1: Find all positions with sufficient RT stops and rank by RT stop count
+
+Step 2: For each position, retrieve CLIP/SHAPE data for <range> bases up and downstream.
+2a.  If a position falls in a range that has already been identified, it is skipped, preventing neighboring sites with high RT stops from being counted multiple times. 
+
+Step 3: Format table and write to <outfile>.  Each position is given a local position relative to the high-stop position, in the range of -<range> to +<range>.
+
+reverse_grab50.sh
+
+Goal: Re-number local positions for negative-strand transcripts in output of grab50.py, so that positions up & downstream of each position are consistently oriented.
+Inputs: output of grab50.py
+Outputs: inputfile.reversed
+
+How it works:
+
+Step 1: Swap the sign for the local position of each site if the transcript is negative-strand.  
+
+Step 2: There is no step 2; this is just a one-liner that should be integrated into grab50.py at some point.
+
+posmeans.py
+
+Goal: Calculate mean SHAPE and CLIP values for each local position.
+Inputs: output of reverse_grab50.sh
+Outputs: Three-column table (local position, mean, data type) to stdout
+
+Step 1: Calculate mean SHAPE and CLIP for each local position.  Pretty straightforward.
+
+trueneg.py
+
+Goal:  Identify sites with a similar motif to those with high CLIP RT stops, but with no CLIP stops.
+Inputs: FASTA genome sequence, output of clipmap (<outprefix>.clipmap), output of grab50.py (not reversed), RPKM data (can get from icSHAPE pipeline), motif length, output prefix, other output of clipmap (<outprefix>.clipranges)
+Outputs: Table containing CLIP/SHAPE data for +/- <range> bases surrounding each position with sufficient RT stops (<outprefix>.seqcomp_complete).  Same format as grab50.py.
+Dependencies: Biopython
+
+How it works:
+
+Step 1:  Get range of genomic positions surrounding each high-CLIP site.  
+1a. Each contiguous range is saved independently, so sites crossing exon boundaries can be properly handled downstream.
+
+Step 2: Extract sequence data for positions from step 1.
+2a. Sequence for each contiguous range is extracted separately; these are then reverse complemented (if the transcript is on the negative strand) and combined in the correct order.
+
+Step 3: Calculate a postion-specific scoring matrix for a range around the central high-clip position (<motif length> bases up and downstream).
+3a. Positions too close to the end of a transcript are skipped here.
+3b. A pseudocount value of 0.5 is used here; though it's probably not necessary given the volume of data.
+
+Step 4: Randomize order of transcripts and filter by RPKM (currently hardcoded to >10)
+
+Step 5: Extract sequence data for transcript
+5a.  Handled as in step 2 (each contiguous range handled separately)
+
+Step 6: Search for motif in transcript sequence
+
+Step 7: If hits are found above a threshold (currently hardcoded to 3.0), translate hit coordinates back into genomic positions and filter out any undesirable sites (too close to the end of a transcript to get the full range, don't have 0 stops at the center position, missing/null SHAPE data).
+7a. The first hit to pass all checks will be added to the true negative list.  Only one site is allowed per transcript.
+
+Step 8: When the number of true negatives is equal to the number of true positives in the input, stop the search and output the final data table.
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
