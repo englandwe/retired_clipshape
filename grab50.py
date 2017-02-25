@@ -29,7 +29,7 @@ def getSites(cliplist,min_stops,range_len):
            #tmpsites=[[idx]+x for x in better_cliplist if x[0:2] == entry[0:2] and x[3] in range(start,stop+1)]
            
            tmpsites=[[idx]+x for x in better_cliplist[start_idx:stop_idx+1] if x[0] == entry[0]]
-           if len(tmpsites) == 2*range_len+1:
+           if len(tmpsites) == 2*range_len+1 and 'NULL' not in [x[5] for x in tmpsites]:
                posidx=-range_len        
                for item in tmpsites:
                    site_list.append([posidx]+[str(item[0])+'_'+item[1]]+item)
